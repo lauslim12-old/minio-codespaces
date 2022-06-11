@@ -130,19 +130,26 @@ func main() {
 	// attempt to create a secure session with S3
 	s3Client := getS3()
 
-	// create bucket
-	_, err := s3Client.CreateBucket(&s3.CreateBucketInput{Bucket: aws.String("bucket")})
+	// get all buckets
+	result, err := s3Client.ListBuckets(nil)
 	if err != nil {
-		fmt.Println(err.Error()) // our bucket may have been created by us, for now we do not check the errors
-		fmt.Println()
+		panic(err.Error())
+	}
 
-		// if aerr, ok := err.(awserr.Error); ok && aerr.Code() == request.CanceledErrorCode {
-		// 	// If the SDK can determine the request or retry delay was canceled
-		// 	// by a context the CanceledErrorCode error code will be returned.
-		// 	fmt.Fprintf(os.Stderr, "upload canceled due to timeout, %v\n", err)
-		// } else {
-		// 	fmt.Fprintf(os.Stderr, "failed to upload object, %v\n", err)
-		// }
+	// create a single bucket if it does not exists
+	bucketExists := false
+	for _, bucket := range result.Buckets {
+		if bucket.Name == aws.String(BUCKET) {
+			bucketExists = true
+			break
+		}
+	}
+
+	if !bucketExists {
+		_, err = s3Client.CreateBucket(&s3.CreateBucketInput{Bucket: aws.String(BUCKET)})
+		if err != nil {
+			panic(err.Error())
+		}
 	}
 
 	// get required information from file
