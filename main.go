@@ -23,6 +23,24 @@ const (
 	BUCKET                = "bucket"                // bucket name
 )
 
+// getBucketItemPresigned allows a user to fetch an item from a bucket with a
+// presigned URL
+func getBucketItemPresigned(s3Client *s3.S3, key string) (string, error) {
+	// preparation process for the presigned URL
+	request, _ := s3Client.GetObjectRequest(&s3.GetObjectInput{
+		Bucket: aws.String(BUCKET),
+		Key:    aws.String(key),
+	})
+
+	// presign URL and return it properly
+	url, err := request.Presign(15 * time.Minute)
+	if err != nil {
+		return "", err
+	}
+
+	return url, nil
+}
+
 // getFileInformation fetches all of the file's required information, which include and are limited
 // to: name, size, type, and buffer
 func getFileInformation(filePath string) (string, int64, string, []byte, error) {
@@ -98,7 +116,7 @@ func presignedUpload(s3Client *s3.S3, key string, length int64, kind string, buf
 	}
 
 	// this url is bugged. see godoc in the function
-	bug := fmt.Sprintf("bugged presigned url: should be on github dev, actual: %s", url)
+	bug := fmt.Sprintf("presignedUpload: bugged presigned url, value: %s", url)
 	fmt.Println(bug)
 	fmt.Println()
 
@@ -118,9 +136,11 @@ func presignedUpload(s3Client *s3.S3, key string, length int64, kind string, buf
 	}
 	defer response.Body.Close()
 
-	// the resulting will always be 400 as codespaces do not allow you to access port 9000 in localhost without
-	// port forwarding
-	fmt.Println(response.Status, response.StatusCode)
+	// the resulting will always be 400 as codespaces forces you to access `localhost:9000` on your computer,
+	// resulting in desynchronization between the codespaces and your computer, as the image is actually hosted in a
+	// port-forwarded minio, not in your localhost
+	bug = fmt.Sprintf("presignedUpload: failure status code, value %s", response.Status)
+	fmt.Println(bug)
 	fmt.Println()
 
 	return nil
@@ -139,7 +159,7 @@ func main() {
 	// create a single bucket if it does not exists
 	bucketExists := false
 	for _, bucket := range result.Buckets {
-		if bucket.Name == aws.String(BUCKET) {
+		if *bucket.Name == BUCKET {
 			bucketExists = true
 			break
 		}
@@ -171,8 +191,15 @@ func main() {
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Println("For now, presigned URL still fails...")
+
+	// get files with presigned URLs
+	url, err := getBucketItemPresigned(s3Client, "naruto.png")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Println(url)
 	fmt.Println()
 
-	// TODO: get files with presigned URLs
+	fmt.Println("For now, presigned URLs with PUT requests and GET requests still end up in failures due to the localhost hardcoding.")
+	fmt.Println()
 }
