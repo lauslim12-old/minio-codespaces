@@ -16,11 +16,11 @@ import (
 
 // all constants
 const (
-	awsAccessKey       = "minioadmin"            // access key
-	awsEndpoint        = "http://localhost:9000" // in minio this is set according to your localhost URL
-	awsSecretAccessKey = "minioadmin"            // secret access key
-	awsRegion          = "ap-northeast-1"        // region
-	bucket             = "bucket"                // bucket name
+	AWS_ACCESS_KEY        = "minioadmin"            // access key
+	AWS_ENDPOINT          = "http://localhost:9000" // in minio this is set according to your localhost URL
+	AWS_SECRET_ACCESS_KEY = "minioadmin"            // secret access key
+	AWS_REGION            = "ap-northeast-1"        // region
+	BUCKET                = "bucket"                // bucket name
 )
 
 // getFileInformation fetches all of the file's required information, which include and are limited
@@ -50,9 +50,9 @@ func getFileInformation(filePath string) (string, int64, string, []byte, error) 
 // getS3 gets the s3 session from minio
 func getS3() *s3.S3 {
 	return s3.New(session.Must(session.NewSession(&aws.Config{
-		Credentials:      credentials.NewStaticCredentials(awsAccessKey, awsSecretAccessKey, ""),
-		Endpoint:         aws.String(awsEndpoint),
-		Region:           aws.String(awsRegion),
+		Credentials:      credentials.NewStaticCredentials(AWS_ACCESS_KEY, AWS_SECRET_ACCESS_KEY, ""),
+		Endpoint:         aws.String(AWS_ENDPOINT),
+		Region:           aws.String(AWS_REGION),
 		DisableSSL:       aws.Bool(true),
 		S3ForcePathStyle: aws.Bool(true),
 	})))
@@ -61,7 +61,7 @@ func getS3() *s3.S3 {
 // normalUpload uploads files the normal way without presigned URLs
 func normalUpload(s3Client *s3.S3, key string, length int64, kind string, buffer []byte) (*s3.PutObjectOutput, error) {
 	output, err := s3Client.PutObject(&s3.PutObjectInput{
-		Bucket:             aws.String(bucket),
+		Bucket:             aws.String(BUCKET),
 		Key:                aws.String(key),
 		Body:               bytes.NewReader(buffer),
 		ContentLength:      aws.Int64(length),
