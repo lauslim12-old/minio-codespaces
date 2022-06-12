@@ -8,10 +8,13 @@ Trying out MinIO with Docker Compose + Go in GitHub Codespaces using `aws-sdk-go
 - Listing buckets.
 - Creating a single bucket if bucket does not exist yet.
 - Normal upload.
-- Uploads with presigned URLs.
-- Fetches with presigned URLs.
+- Uploads a single file with presigned URLs.
+- Fetches a single file with presigned URLs.
+- Downloads a single file with the presigned URLs.
 
-Presigned URLs are still in progress as I am still trying to figure out how to not cause `SignatureNotMatch` error when accessing the images through Codespaces's port forwarding feature.
+Attempting to access the presigned URL directly in GitHub Codespaces (copying the `localhost:9000` URL and opening them in the browser, taking advantage of GitHub Codespaces's port forwarding in the process in order to turn that `localhost:9000` into `*.githubpreview.dev`) will cause `SignatureDoesNotMatch` error. I do not know the exact cause of this error, but it is probably because of the different host and domain names. At first, I thought it was because I placed `Content-Disposition` in the file metadata during the upload process.
+
+However, if you attempt to access the URL while running this project locally, it will work just fine and as expected.
 
 ## Credentials
 
