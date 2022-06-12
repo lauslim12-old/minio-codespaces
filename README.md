@@ -29,8 +29,15 @@ In order to try out this project, open it in GitHub Codespaces, and then after t
 go run .
 ```
 
+To try the project locally, you can clone the repository, and then:
+
+```bash
+docker-compose up -d
+go run .
+```
+
 Please examine the output and the code to get the general idea of how MinIO works in both Docker and Codespaces environment!
 
 ## License
 
-MIT License.
+MIT License. Image credit is [Unsplash Image](https://unsplash.com/photos/2wcfY2qeFFE).
