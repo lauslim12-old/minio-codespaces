@@ -3,7 +3,9 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"html/template"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path"
@@ -189,7 +191,7 @@ func main() {
 	}
 
 	// get required information from file
-	fileName, fileSize, fileType, fileBuffer, err := getFileInformation("images/image.png")
+	fileName, fileSize, fileType, fileBuffer, err := getFileInformation(path.Join("images", "image.png"))
 	if err != nil {
 		panic(err.Error())
 	}
@@ -211,13 +213,13 @@ func main() {
 	fmt.Println()
 
 	// get files with presigned URLs
-	getPresignedURL, err := getBucketItemPresigned(s3Client, "images/image.png")
+	getPresignedURL, err := getBucketItemPresigned(s3Client, path.Join("images", "image.png"))
 	if err != nil {
 		panic(err.Error())
 	}
 
 	// download file from that presigned URL
-	status, err := downloadImagePresignedURL("images/downloaded.png", getPresignedURL)
+	status, err := downloadImagePresignedURL(path.Join("images", "downloaded.png"), getPresignedURL)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -228,4 +230,36 @@ func main() {
 	fmt.Printf("Presigned URL for GET: %s\n", getPresignedURL)
 	fmt.Println()
 	fmt.Printf("Status text for Presigned GET process: %s\n", status)
+	fmt.Println()
+
+	// create simple webserver to test the `Host` header
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// try to generate another S3 client
+		s3HTTPClient := getS3()
+
+		// load template
+		template, err := template.ParseFiles(path.Join("views", "index.html"))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// get another presigned url for our file
+		getPresignedURL, err := getBucketItemPresigned(s3HTTPClient, path.Join("images", "image.png"))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// execute template as a response
+		err = template.Execute(w, map[string]interface{}{"url": getPresignedURL})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	})
+
+	// serve html file to test `Host` header
+	fmt.Println("Server starts on port 8080!")
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
