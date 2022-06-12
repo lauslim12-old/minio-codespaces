@@ -61,7 +61,7 @@ func getFileInformation(filePath string) (string, int64, string, []byte, error) 
 	fileBuffer := make([]byte, fileInformation.Size())
 	file.Read(fileBuffer)
 
-	// return required variables
+	// return file information as described in the godoc comment
 	return file.Name(), fileInformation.Size(), http.DetectContentType(fileBuffer), fileBuffer, nil
 }
 
@@ -79,12 +79,11 @@ func getS3() *s3.S3 {
 // normalUpload uploads files the normal way without presigned URLs
 func normalUpload(s3Client *s3.S3, key string, length int64, kind string, buffer []byte) (*s3.PutObjectOutput, error) {
 	output, err := s3Client.PutObject(&s3.PutObjectInput{
-		Bucket:             aws.String(BUCKET),
-		Key:                aws.String(key),
-		Body:               bytes.NewReader(buffer),
-		ContentLength:      aws.Int64(length),
-		ContentType:        aws.String(kind),
-		ContentDisposition: aws.String("attachment"),
+		Bucket:        aws.String(BUCKET),
+		Key:           aws.String(key),
+		Body:          bytes.NewReader(buffer),
+		ContentLength: aws.Int64(length),
+		ContentType:   aws.String(kind),
 	})
 	if err != nil {
 		return nil, err
@@ -94,31 +93,21 @@ func normalUpload(s3Client *s3.S3, key string, length int64, kind string, buffer
 }
 
 // presignedUpload uploads files with presigned URLs
-// there is a bug: the presigned URL should not be 'localhost:9000', but instead, it should be '*.github.dev' as this
-// is developed on github codespaces. this is a known issue and the fixes for this problem are:
-// 1. replace 'localhost:9000' with the proper '*.github.dev' url
-// 2. do not use presigned URLs, you can use the normal 'PutObjectInput' instead
-func presignedUpload(s3Client *s3.S3, key string, length int64, kind string, buffer []byte) error {
+func presignedUpload(s3Client *s3.S3, key string, length int64, kind string, buffer []byte) (string, string, error) {
 	// preparation process to generate a request to put the object using presigned URLs
 	request, _ := s3Client.PutObjectRequest(&s3.PutObjectInput{
-		Bucket:             aws.String("bucket"),
-		Key:                aws.String(key),
-		Body:               bytes.NewReader(buffer),
-		ContentLength:      aws.Int64(length),
-		ContentType:        aws.String(kind),
-		ContentDisposition: aws.String("attachment"),
+		Bucket:        aws.String("bucket"),
+		Key:           aws.String(key),
+		Body:          bytes.NewReader(buffer),
+		ContentLength: aws.Int64(length),
+		ContentType:   aws.String(kind),
 	})
 
 	// generate presigned URL for 15 minutes
 	url, err := request.Presign(15 * time.Minute)
 	if err != nil {
-		return err
+		return "", "", err
 	}
-
-	// this url is bugged. see godoc in the function
-	bug := fmt.Sprintf("presignedUpload: presigned url value: %s", url)
-	fmt.Println(bug)
-	fmt.Println()
 
 	// prepare HTTP client to upload to the server
 	client := &http.Client{}
@@ -126,24 +115,18 @@ func presignedUpload(s3Client *s3.S3, key string, length int64, kind string, buf
 	uploader.ContentLength = length
 	uploader.Header.Set("Content-Type", kind)
 	if err != nil {
-		return err
+		return "", "", err
 	}
 
 	// do perform the upload
 	response, err := client.Do(uploader)
 	if err != nil {
-		return err
+		return "", "", err
 	}
 	defer response.Body.Close()
 
-	// the resulting will always be 400 as codespaces forces you to access `localhost:9000` on your computer,
-	// resulting in desynchronization between the codespaces and your computer, as the image is actually hosted in a
-	// port-forwarded minio, not in your localhost
-	bug = fmt.Sprintf("presignedUpload: failure status code, value %s", response.Status)
-	fmt.Println(bug)
-	fmt.Println()
-
-	return nil
+	// return the presigned url and status code
+	return url, response.Status, nil
 }
 
 func main() {
@@ -187,19 +170,21 @@ func main() {
 	fmt.Println()
 
 	// upload file with presigned URL
-	err = presignedUpload(s3Client, fileName, fileSize, fileType, fileBuffer)
+	putPresignedURL, statusText, err := presignedUpload(s3Client, fileName, fileSize, fileType, fileBuffer)
 	if err != nil {
 		panic(err.Error())
 	}
+	fmt.Printf("Uploaded file with `presignedUpload` function with status: %s\n", statusText)
+	fmt.Println()
 
 	// get files with presigned URLs
-	url, err := getBucketItemPresigned(s3Client, "image.png")
+	getPresignedURL, err := getBucketItemPresigned(s3Client, "images/image.png")
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Println(url)
-	fmt.Println()
 
-	fmt.Println("For now, presigned URLs with PUT requests and GET requests still end up in failures due to the localhost hardcoding.")
+	// print collection of presigned URLs
+	fmt.Printf("Presigned URL for PUT: %s\n", putPresignedURL)
 	fmt.Println()
+	fmt.Printf("Presigned URL for GET: %s\n", getPresignedURL)
 }
