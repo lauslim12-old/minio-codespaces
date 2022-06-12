@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path"
@@ -22,6 +23,38 @@ const (
 	AWS_REGION            = "ap-northeast-1"        // region
 	BUCKET                = "bucket"                // bucket name
 )
+
+// downloadImagePresignedURL downloads an image from a presigned URL and places them in an
+// arbitrary location at the filesystem
+func downloadImagePresignedURL(filePath, url string) (string, error) {
+	// create the file
+	out, err := os.Create(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer out.Close()
+
+	// get the data
+	response, err := http.Get(url)
+	if err != nil {
+		return "", err
+	}
+	defer response.Body.Close()
+
+	// check server response
+	if response.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("downloadImagePresignedURL: download fails with status %s", response.Status)
+	}
+
+	// write the resulting body to that file
+	_, err = io.Copy(out, response.Body)
+	if err != nil {
+		return "", err
+	}
+
+	// return the status code
+	return response.Status, nil
+}
 
 // getBucketItemPresigned allows a user to fetch an item from a bucket with a
 // presigned URL
@@ -183,8 +216,16 @@ func main() {
 		panic(err.Error())
 	}
 
+	// download file from that presigned URL
+	status, err := downloadImagePresignedURL("images/downloaded.png", getPresignedURL)
+	if err != nil {
+		panic(err.Error())
+	}
+
 	// print collection of presigned URLs
 	fmt.Printf("Presigned URL for PUT: %s\n", putPresignedURL)
 	fmt.Println()
 	fmt.Printf("Presigned URL for GET: %s\n", getPresignedURL)
+	fmt.Println()
+	fmt.Printf("Status text for Presigned GET process: %s\n", status)
 }
