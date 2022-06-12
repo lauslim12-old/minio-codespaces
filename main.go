@@ -116,7 +116,7 @@ func presignedUpload(s3Client *s3.S3, key string, length int64, kind string, buf
 	}
 
 	// this url is bugged. see godoc in the function
-	bug := fmt.Sprintf("presignedUpload: bugged presigned url, value: %s", url)
+	bug := fmt.Sprintf("presignedUpload: presigned url value: %s", url)
 	fmt.Println(bug)
 	fmt.Println()
 
@@ -173,7 +173,7 @@ func main() {
 	}
 
 	// get required information from file
-	fileName, fileSize, fileType, fileBuffer, err := getFileInformation("images/naruto.png")
+	fileName, fileSize, fileType, fileBuffer, err := getFileInformation("images/image.png")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -193,7 +193,7 @@ func main() {
 	}
 
 	// get files with presigned URLs
-	url, err := getBucketItemPresigned(s3Client, "naruto.png")
+	url, err := getBucketItemPresigned(s3Client, "image.png")
 	if err != nil {
 		panic(err.Error())
 	}
