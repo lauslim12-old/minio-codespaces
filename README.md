@@ -16,6 +16,8 @@ Attempting to access the presigned URL directly in GitHub Codespaces (copying th
 
 After researching multiple times, it seems that this is the expected behavior. S3 storages are supposed to be deployed in a dedicated endpoint, taking example from AWS, GCP, and DigitalOcean respectively (`s3.amazonaws.com`, `storage.googleapis.com`, and `<SPACE_NAME>.<REGION>.digitaloceanspaces.com`). We connect our API/app to that endpoint, and that endpoint is solely used as an S3 compatible storage in production. When we deploy our S3 storages like that (or in `localhost`), we would not have any problem with presigned URLs (as they will not aim at our `localhost` anymore, thus not causing any problems when we need to generate presigned URLs).
 
+It also seems that `aws-sdk-go` and `minio-go` creates their presigned URL based on the passed endpoint in the S3 session object. If the endpoint URL is `localhost:9000` then the presigned URL will start with `localhost:9000`, and so on and so forth.
+
 To reiterate, if you attempt to access the URL while running this project locally, it will work just fine and as expected.
 
 ## Credentials
