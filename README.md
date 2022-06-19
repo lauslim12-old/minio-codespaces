@@ -18,7 +18,7 @@ After researching multiple times, it seems that this is the expected behavior. S
 
 It also seems that `aws-sdk-go` and `minio-go` creates their presigned URL based on the passed endpoint in the S3 session object. If the endpoint URL is `localhost:9000` then the presigned URL will start with `localhost:9000`, and so on and so forth.
 
-To reiterate, if you attempt to access the URL while running this project locally, it will work just fine and as expected.
+To reiterate, if you attempt to access the URL while running this project locally, it will work just fine and as expected. However, if you try to access this project in GitHub Codespaces, it will not work for reasons mentioned above.
 
 ## Credentials
 
